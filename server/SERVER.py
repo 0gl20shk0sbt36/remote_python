@@ -26,10 +26,7 @@ def main():
         while True:
             try:
                 n = recv(conn)
-                if type(n) == tuple:
-                    break
-                else:
-                    n = str(n, 'utf-8')
+                n = str(n[0], 'utf-8')
                 if n == 'quit()':
                     break
                 elif n == 'quit(0)':
@@ -39,14 +36,17 @@ def main():
                     run = False
                     break
                 try:
-                    if n.split()[0] == 'send':
-                        n = n.split()
-                        if len(n) == 2:
-                            send(conn, str(instructions.v[n[1]]).encode())
+                    n_ = n.split()
+                    if n_[0] == 'send':
+                        if len(n_) == 2:
+                            send(conn, str(instructions.v[n_[1]]).encode())
                             continue
-                        elif len(n) == 3:
-                            send(conn, pickle.dumps(instructions.v[n[2]]))
-                    instructions.instructions(n)  # main(n, v)
+                        elif len(n_) == 3:
+                            send(conn, pickle.dumps(instructions.v[n_[2]]))
+                    elif n_[0] == 'send_to':
+                        instructions.instructions(f'{n_[1]} = {pickle.loads(recv(conn)[0])}')
+                    else:
+                        instructions.instructions(n)  # main(n, v)
                     n = None
                     e = None
                 except:
@@ -57,10 +57,7 @@ def main():
                 if n is None:
                     send(conn, b'\x00')
                 else:
-                    if e is not None:
-                        send(conn, str(n).encode(), 3)
-                    else:
-                        send(conn, str(n).encode())
+                    send(conn, str(n).encode(), 3)
             except BlockingIOError:
                 pass
         conn.close()

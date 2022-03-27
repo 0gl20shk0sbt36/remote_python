@@ -1,7 +1,7 @@
 import socket
 # from time import sleep
-import pickle
-import traceback
+from pickle import dumps, loads
+from traceback import format_exc
 from json import loads
 from os import listdir
 from os.path import join
@@ -9,44 +9,21 @@ from fold import folds_conversion
 
 from psutil import disk_partitions
 
-from instructions import Instructions
-import ctypes, sys
+from instructions import Instructions, recv, send
+from sys import stdout
+from ctypes import windll
 
 
 # red
-def printRed(mess):
+def print_red(mess):
     STD_OUTPUT_HANDLE = -11
     FOREGROUND_RED = 0x0c  # red.
     FOREGROUND_BLUE = 0x09  # blue.
     FOREGROUND_GREEN = 0x0a  # green.
-    std_out_handle = ctypes.windll.kernel32.GetStdHandle(STD_OUTPUT_HANDLE)
-    ctypes.windll.kernel32.SetConsoleTextAttribute(std_out_handle, FOREGROUND_RED)
-    sys.stdout.write(mess + '\n')
-    ctypes.windll.kernel32.SetConsoleTextAttribute(std_out_handle, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE)
-
-
-def recv(conn):
-    data = b''
-    while True:
-        while True:
-            try:
-                n = conn.recv(1025)
-                if n:
-                    break
-            except BlockingIOError:
-                pass
-        data += n[:-1]
-        if n[-1] == 1:
-            pass
-        else:
-            return data, n[-1]
-
-
-def send(s, n):
-    i = -1024
-    for i in range(0, len(n) // 1024 * 1024, 1024):
-        s.send(n[i: i + 1024] + b'\x01')
-    s.send(n[i + 1024:] + b'\x00')
+    std_out_handle = windll.kernel32.GetStdHandle(STD_OUTPUT_HANDLE)
+    windll.kernel32.SetConsoleTextAttribute(std_out_handle, FOREGROUND_RED)
+    stdout.write(mess + '\n')
+    windll.kernel32.SetConsoleTextAttribute(std_out_handle, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE)
 
 
 def main():
@@ -99,16 +76,23 @@ def main():
             state = 'cloud'
             continue
         if state == 'native':
-            try:
-                instructions.instructions(n)
-            except:
-                traceback.print_exc()
+            n_ = n.split()
+            if n_[0] == 'send' and len(n_) == 3:
+                send(s, b'send_to ' + n_[1].encode())
+                print(instructions.v[n_[2]])
+                send(s, dumps(instructions.v[n_[2]]))
+                recv(s)
+            else:
+                try:
+                    instructions.instructions(n)
+                except:
+                    print_red(format_exc())
         elif state == 'cloud':
             n_ = n.split()
             if n_[0] == 'send' and len(n_) == 3:
                 send(s, n.encode())
                 n = recv(s)
-                instructions.instructions(f'{n_[1]} = {pickle.loads(n[0])}')
+                instructions.instructions(f'{n_[1]} = {loads(n[0])}')
             else:
                 send(s, n.encode())
                 while True:
@@ -125,7 +109,7 @@ def main():
                         # print('\033[31m', end='')
                         # print(str(data, "utf-8"), end='')
                         # print('\033[0m')
-                        printRed(str(data, "utf-8"))
+                        print_red(str(data, "utf-8"))
                         break
                     elif mode == 4:
                         n = loads(data)

@@ -19,11 +19,11 @@ def recv(conn):
                     break
             except BlockingIOError:
                 pass
-            except ConnectionResetError:
-                return 'error', 'ConnectionResetError'
         data += n[:-1]
-        if n[-1] == 0:
-            return data
+        if n[-1] == 1:
+            pass
+        else:
+            return data, n[-1]
 
 
 def send(s, n, a=0):
