@@ -19,6 +19,8 @@ def recv(conn):
                     break
             except BlockingIOError:
                 pass
+            except ConnectionResetError:
+                return
         data += n[:-1]
         if n[-1] == 1:
             pass

@@ -26,6 +26,8 @@ def main():
         while True:
             try:
                 n = recv(conn)
+                if n is None:
+                    break
                 n = str(n[0], 'utf-8')
                 if n == 'quit()':
                     break
